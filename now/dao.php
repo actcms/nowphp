@@ -152,13 +152,14 @@ final class dao {
                 
                 $sql .= ') VALUES (';
                 $sql .= implode(',', $keys) . ')';
-                $result = $this->db->execute($sql, $para);
+                $result+= $this->db->execute($sql, $para);
             }
             
             //清除查询缓存
             if ($this->schema['cache'] > -1){//使用缓存
                 $this->cache->inc('qc.'.$this->mdl.'.'.$this->tbl);
             }
+			return $result;
         }catch (Exception $e){
             throw new err($e->getMessage(), 100);
         }
