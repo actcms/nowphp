@@ -140,6 +140,7 @@ final class dao {
         
         $bsql = 'INSERT INTO ' .$this->tbl . ' (';
         try{
+        	$result = 0;
             foreach($data as $para){
                 if (!key_exists($this->key, $para)){
                     $para[$this->key] = $this->uuid();
@@ -151,13 +152,14 @@ final class dao {
                 
                 $sql .= ') VALUES (';
                 $sql .= implode(',', $keys) . ')';
-                $result = $this->db->execute($sql, $para);
+                $result += $this->db->execute($sql, $para);
             }
             
             //清除查询缓存
             if ($this->schema['cache'] > -1){//使用缓存
                 $this->cache->inc('qc.'.$this->mdl.'.'.$this->tbl);
             }
+            return $result;
         }catch (Exception $e){
             throw new err($e->getMessage(), 100);
         }
