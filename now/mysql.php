@@ -218,7 +218,7 @@ final class mysql {
             $result =  $smt->fetchAll(PDO::FETCH_ASSOC);
             $smt = null;
         }catch(Exception $e){
-            throw new err($e->getMessage(),100);
+            throw new err('sql error='.$e->getMessage().'. sql='.$sql,100);
         }
         return $result;
     }
@@ -241,7 +241,7 @@ final class mysql {
             $re = $smt->rowCount();
             $smt = null;
         }catch(Exception $e){
-            throw new err($e->getMessage(), 100);
+            throw new err('sql error='.$e->getMessage().'. sql='.$sql,100);
         }
         return $re;
     }

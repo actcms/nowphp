@@ -20,23 +20,16 @@ final class tpl {
      */
     public static function get_tpl($page, $data=array()){
         $path = $GLOBALS['cfg']['cfg']['tpl'].$page.'.html';
-        
         $tpl = file_get_contents($path);
-//         $tpl = str_replace('<!--{', "\nEF;", $tpl);
-//         $tpl = str_replace('}-->', ";\$str.=<<<EF\n", $tpl);
-//         $tpl = str_replace('{{', "\nEF;\n\$str.=", $tpl);
-//         $tpl = str_replace('}}', ";\n\$str.=<<<EF\n", $tpl);
         $tpl = str_replace(
                 array(
                 '<!--{', '}-->', '{{', '}}'
                 ), 
                 array(
-                "\nEF;", ";\$str.=<<<EF\n", "\nEF;\n\$str.=", ";\n\$str.=<<<EF\n",
+                "\nEF;\n", ";\$str.=<<<EF\n", "\nEF;\n\$str.=", ";\n\$str.=<<<EF\n",
                 ), $tpl);
         
        $tpl = "\$str=<<<EF\n".$tpl."\nEF;\nreturn \$str;";
-//         echo $tpl;
-        
        $fun = create_function('$data', $tpl);
         return $fun($data);
     }

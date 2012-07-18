@@ -58,8 +58,8 @@ final class view {
      * 使用模版返回结果内容，尽量不要用这个，可以使用前台模版
      * @static
      * @author 欧远宁
-     * @param array $data  返回的数据
      * @param string $page 模版页面名称
+     * @param array $data  返回的数据
      */
     public static function tpl($page, $data=array()){
         $ret = tpl::get_tpl($page, $data);
@@ -67,5 +67,59 @@ final class view {
         header('Cache-Control: public,must-revalidate,max-age=0,post-check=0,pre-check=0');
         header('Content-type:text/html;charset=utf-8');
         echo $ret;
+    }
+    
+    /**
+     * 生成一份excel下载
+     * @static
+     * @author 欧远宁
+     * @param string $name 下载时候显示的名字
+     * @param string $head 标题栏位
+     * @param array $data  返回的数据
+     */
+    public static function excel($name, $head, $data){
+    	header('Pragma: public');
+    	header('Expires: 0');
+    	header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+    	header('Content-Type: application/force-download');
+    	header('Content-Type: application/octet-stream');
+    	header('Content-Type: application/download');
+    	header('Content-Disposition: attachment;filename='.$name.'.xls');
+    	header('Content-Transfer-Encoding: binary');
+    	excel::write($head, $data);
+    }
+    
+    /**
+     * 下载一份现有文件
+     * @static
+     * @author 欧远宁
+     * @param string $name 下载时候显示的名字
+     * @param string $head 标题栏位
+     * @param array $data  返回的数据
+     */
+    public static function down($name, $path, $type='application/octet-stream'){
+    	header('Content-type: '.$type);
+    	
+    	//处理中文文件名
+    	$ua = $_SERVER["HTTP_USER_AGENT"];
+    	
+    	if (preg_match('/MSIE/', $ua)) {
+	    	$name = urlencode($name);
+	    	$name = str_replace("+", "%20", $name);
+    		header('Content-Disposition: attachment; filename="' . $name . '"');
+    	} else if (preg_match("/Firefox/", $ua)) {
+    		header("Content-Disposition: attachment; filename*=\"utf8''" . $name . '"');
+    	} else {
+    		header('Content-Disposition: attachment; filename="' . $name . '"');
+    	}
+    	
+    	//让Xsendfile发送文件
+    	$cfg = fun::get_cfg('cfg', 'upload');
+    	if ($cfg && key_exists('send_file', $cfg) && $cfg['send_file'] != ''){
+    		header($cfg['send_file']. ': '.$path);
+    	} else {
+    		header('Content-Length: '. filesize($path));
+    		readfile($path);
+    	}
     }
 }

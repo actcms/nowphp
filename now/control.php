@@ -31,8 +31,6 @@ final class control {
      * @author 欧远宁
      */
     public static function inc(){
-        require_once OP.'cfg'.DS.'cfg.php';
-        require_once OP.'cfg'.DS.'db.php';
         require_once OP.'cfg'.DS.'lang.php';
 
         //把schema和sql的文件包含进来
@@ -131,15 +129,15 @@ final class control {
                         );
                 view::json($ret);
             }
-            print_r($e->getTrace());
+//             print_r($e->getTrace());
         } catch (Exception $ex){//捕获未预估的异常
             self::rollback();
             if (isset($data['para']['r'])){
 
             } else {
                 $ret = array(
-                        '_c'=>$e->getCode(),
-                        '_m'=>$e->getMessage()
+                        '_c'=>$ex->getCode(),
+                        '_m'=>$ex->getMessage()
                         );
                 view::json($ret);
             }

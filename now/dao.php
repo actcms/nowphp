@@ -113,20 +113,19 @@ final class dao {
      * @param array $data 需要新增的数据 
      * @example
      * //自动生成id<br/>
-     * $userDao = new dao('blog', 'user');<br/>
-     * $userDao->add(array(<br/>
+     * $user_dao->add(array(<br/>
      *     'name'=>'aaa','age'=>12<br/>
      * ));<br/><br/>
      * 
      * //手动赋id<br/>
-     * $userDao = new dao('blog', 'user');<br/>
-     * $userDao->add(array(<br/>
-     *     'user_id'=>$userDao->uuid(), 'name'=>'aaa','age'=>12<br/>
+     * $user_dao = new dao('blog', 'user');<br/>
+     * $user_dao->add(array(<br/>
+     *     'user_id'=>$user_dao->uuid(), 'name'=>'aaa','age'=>12<br/>
      * ));<br/><br/>
      * 
      * //批量新增<br/>
-     * $userDao = new dao('blog', 'user');<br/>
-     * $userDao->add(array('name'=>'名字1'),array('name'=>'名字2'));<br/>
+     * $user_dao = new dao('blog', 'user');<br/>
+     * $user_dao->add(array('name'=>'名字1'),array('name'=>'名字2'));<br/>
      */
     public function add($data = array()){
         $len = count($data);
@@ -146,20 +145,19 @@ final class dao {
                     $para[$this->key] = $this->uuid();
                 }
                 
-                $sql = $bsql.implode(',', array_keys($para));
+                $sql = $bsql.'`'.implode('`,`', array_keys($para)).'`';
                 $para = $this->pre_para($para);
                 $keys = array_keys($para);
                 
                 $sql .= ') VALUES (';
                 $sql .= implode(',', $keys) . ')';
-                $result+= $this->db->execute($sql, $para);
+                $result = $this->db->execute($sql, $para);
             }
             
             //清除查询缓存
             if ($this->schema['cache'] > -1){//使用缓存
                 $this->cache->inc('qc.'.$this->mdl.'.'.$this->tbl);
             }
-			return $result;
         }catch (Exception $e){
             throw new err($e->getMessage(), 100);
         }
@@ -169,12 +167,12 @@ final class dao {
      * 删除数据
      * @author 欧远宁
      * @param any $filter    筛选条件，如果是字符串，则使用Id进行删除，否则需拼sql
-     * @param any $del_one    需要删除的hasOne表信息, 格式为：array('mdl1.table1','mdl2.table2');   //模块名.表名
-     * @param any $del_many   需要删除的hasMany表信息,格式为：array('mdl1.table1','mdl2.table2');  //模块名.表名
+     * @param any $del_one    需要删除的一对一表信息, 格式为：array('mdl1.table1','mdl2.table2');   //模块名.表名
+     * @param any $del_many   需要删除的一对多表信息,格式为：array('mdl1.table1','mdl2.table2');  //模块名.表名
      * @example
      * //删除帖子表及一对一的帖子统计表，一对多的回复表<br/>
-     * $topicDao = new dao('blog','topic');<br/>
-     * $topicDao->del('topicid', array('blog.topic_stat'),array('blog.reply'));<br/>
+     * $topic_dao = new dao('blog','topic');<br/>
+     * $topic_dao->del('topicid', array('blog.topic_stat'),array('blog.reply'));<br/>
      */
     public function del($filter='',$del_one=null, $del_many=null){
         try{
@@ -185,8 +183,17 @@ final class dao {
             }
 
             if (is_array($filter)){
-                if (count($filter) == 1 && key_exists($this->key, $filter)){
+            	$flen = count($filter);
+                if ($flen == 1 && key_exists($this->key, $filter)){
                     return $this->del($filter[$this->key], $del_one, $del_many);
+                }
+                
+                //有值的普通数组
+                if ($flen > 0 && !fun::is_assoc($filter)){
+                	foreach($filter as $fkey){
+                		$this->del($fkey, $del_one, $del_many);
+                	}
+                	return;
                 }
 
                 $lst = $this->get_rec($filter, array('all'=>'y'));
@@ -210,22 +217,41 @@ final class dao {
     }
         
     /**
+     * 一次更新多笔记录
+     * @author 欧远宁
+     * @param array $para 是一个数组，其每个项的格式为 array(filter,  $data)。与mdf($filter, $data)要求一样
+     * @example
+     * $user_dao = new dao('base', 'user');<br/>
+     * $user_dao->mdf(<br/>
+     *    array('user_id1', array('age'=>18),<br/>
+     *    array(array('sex'=>'male'), array('name'=>'i am male'))<br/>
+     * );<br/>
+     */
+    public function muti_mdf($paras){
+    	$ret = 0;
+    	foreach($paras as $para){
+    		$ret+=$this->mdf($para[0],  $para[1]);
+    	}
+    	return $ret;
+    }
+    
+    /**
      * 进行更新操作
      * @author 欧远宁
      * @param any $filter 筛选条件
      * @param array $data 需要更改的值
      * @example
      * //单笔修改<br/>
-     * $topicDao = new dao('blog','topic');<br/>
-     * $topicDao->mdf('topicId', array('title'=>'新的标题'));<br/><br/>
+     * $topic_dao = new dao('blog','topic');<br/>
+     * $topic_dao->mdf('topicId', array('title'=>'新的标题'));<br/><br/>
      * 
      * //批量修改<br/>
-     * $topicDao = new dao('blog', 'topic');<br/>
-     * $topicDao->mdf(array('forum_id'=>'板块ID'), array('title'=>'标题'));<br/>
+     * $topic_dao = new dao('blog', 'topic');<br/>
+     * $topic_dao->mdf(array('forum_id'=>'板块ID'), array('title'=>'标题'));<br/>
      */
     public function mdf($filter='',$data){
         if (!is_array($data) || empty($data)){
-            return;
+            throw new err("修改的数据为空");
         }
         
         if (is_array($filter) && count($filter) == 0) {
@@ -236,10 +262,18 @@ final class dao {
         
         try{
             $result = 0;
-
             if (is_array($filter)){//筛选式更新
-                if (count($filter) == 1 && key_exists($this->key, $filter)){
+            	$flen = count($filter);
+                if ($flen && key_exists($this->key, $filter)){
                     return $this->mdf($filter[$this->key], $data);
+                }
+                
+                //有值的普通数组
+                if ($flen > 0 && !fun::is_assoc($filter)){
+                	foreach($filter as $fkey){
+                		$result+= $this->mdf($fkey, $data);
+                	}
+                	return $result;
                 }
                 
                 if ($this->schema['cache'] > -1) {
@@ -250,12 +284,11 @@ final class dao {
                 } else {
                     $sql = 'UPDATE '. $this->tbl. ' SET ';
                     foreach ($data as $k => $v) {
-                        $sql .= ' '.$k.' = :v_'.$k.',';
+                        $sql .= ' `'.$k.'` = :v_'.$k.',';
                     }
-//                     $sql = substr($sql,0,(mb_strlen($sql)-1)) . ' WHERE 1=1';
                     $sql = substr($sql, 0, -1) . ' WHERE 1=1';
                     foreach ($filter as $k => $v) {
-                        $sql .= ' AND '.$k.' = :f_'.$k;
+                        $sql .= ' AND `'.$k.'` = :f_'.$k;
                     }
                     $param = array_merge( $this->pre_para($data, 'v_'), $this->pre_para($filter, 'f_') );
                     $result = $this->db->execute($sql, $param);
@@ -263,9 +296,8 @@ final class dao {
             } else {//根据ID更新
                 $sql = 'UPDATE '.$this->tbl.' SET ';
                 foreach ($data as $k => $v) {
-                    $sql .= ' '.$k.' = :'.$k.',';
+                    $sql .= ' `'.$k.'` = :'.$k.',';
                 }
-//                 $sql = substr($sql, 0, (mb_strlen($sql)-1));
                 $sql = substr($sql, 0, -1);
                 $param = $this->pre_para($data);
                 $param[':'.$this->key] = $filter;
@@ -273,8 +305,8 @@ final class dao {
                 $result = $this->db->execute($sql, $param);
                 //移除缓存
                 $this->mv_obj_cache($filter);
-                return $result;
             }
+            return $result;
         } catch (Exception $e){
             throw new err($e->getMessage(),10000);
         }
@@ -296,7 +328,7 @@ final class dao {
         if( is_array($filter) ) {
             $sql.=' 1=1';
             foreach ($filter as $k => $v) {
-                $sql.= ' AND '.$k.' = :'.$k;
+                $sql.= ' AND `'.$k.'` = :'.$k;
             }
             $filter = $this->pre_para($filter);
             $plist = $this->db->query($sql, $filter);
@@ -309,12 +341,46 @@ final class dao {
     }
     
     /**
+     * 进行字段的加总
+     * @author 欧远宁
+     * @param array $fields 	统计的字段
+     * @param string $where     where字句。可以包含group by 和order by等。
+     * @param array $para       where中使用到的参数列表
+     * @param array $group_by   group by字句
+     * @example
+     * $pro_dao = new dao('base', 'pro');<br/>
+     * $rec = $pro_dao->fsum('pre_degree');<br/>
+     * $rec = $pro_dao->fsum(array('pre_degree'));<br/>
+     * $rec = $pro_dao->fsum(array('pre_degree'), 'pro_id=:pro_id', array('pro_id'=>'aaa'));<br/>
+     * $rec = $pro_dao->fsum(array('pre_degree'), '', null, 'pro_kind_id');
+     */
+    public function fsum($fields, $where='', $para=null , $group_by=''){
+    	if (!is_array($fields)){
+    		$fields = array($fields);
+    	}
+    	$sql = 'SELECT';
+    	foreach($fields as $field){
+    		$sql.= ' SUM(`'.$field.'`) AS '.$field;
+    	}
+    	$sql.= ' FROM '.$this->tbl;
+    	if ($where != ''){
+    		$sql.= ' WHERE '.$where;
+            $para = $this->pre_para($para);
+    	}
+    	if ($group_by != ''){
+    		$sql.= ' GROUP BY '.$group_by;
+    	}
+        $lst = $this->db->query($sql, $para);
+        return $lst;
+    }
+    
+    /**
      * 进行单表的，基于等号筛选的查询
      * @author 欧远宁
-     * @param array $filter  筛选条件如：array('UserId'=>'outrace')。如果是字符串，则根据ID查找
+     * @param array $filter  筛选条件如：array('uid'=>'outrace')。如果是字符串，则根据ID查找
      * @param array $page    分页参数    array('cur'=>当前页数,'size'=>每页数据量, start=开始笔数,不予cur同时使用,<br/>
      *                                     'all'=>是否全部取回来y/n,'ttl'=是否返回总数)
-     * @param string $order  排序信息如：'AddTime Desc,UserName Asc'，默认不排序
+     * @param string $order  排序信息如：'time desc,name asc'，默认不排序
      * @param array $get_one 所需要获取的一对一表如：array('base.user.user_id','forum.forum_stat')
      * @example 
      * $dao = new dao('blog','article');<br/>
@@ -333,11 +399,30 @@ final class dao {
     public function get($filter='', $page=null, $order=null, $get_one=null){
         $result[$this->key_list] = array();
         if ($filter == '') $filter = array();
-
+        
+        if (is_array($get_one)) {
+        	$one_arr = array();
+        	foreach ($get_one as $obj){
+        		$arr = explode('.',$obj);
+        		$one_arr[] = $arr;
+        		$result[$arr[1].'_list'] = array();
+        	}
+        }
+        
         if (is_array($filter)){//并非根据ID获取
-            if (count($filter) == 1 && key_exists($this->key, $filter)){
+        	$flen = count($filter);
+            if ($flen == 1 && key_exists($this->key, $filter)){
                 return $this->get($filter[$this->key], null, null, $get_one);
             }
+            
+            //有值的普通数组
+        	if ($flen > 0 && !fun::is_assoc($filter)){
+        		foreach($filter as $fkey){
+        			$tmp = $this->get($fkey, null, null, $get_one);
+        			$result = array_merge($result, $tmp);
+        		}
+        		return $result;
+        	}
 
             $klist = $this->get_rec($filter, $page, $order);
             if(!is_null($klist['ttl'])){
@@ -347,20 +432,15 @@ final class dao {
             foreach ($klist['list'] as $obj){
                 $tmp = $this->get($obj[$this->key], null, null, $get_one); //一次返回多笔记录的时候，不支持$getMany
                 foreach ($tmp as $k=>$v){
-                    $result[$k][] = $v[0];
+                	if (count($v) > 0){
+                		$result[$k][] = $v[0];
+                	} else {
+                		$result[$k][] = array();
+                	}
                 }
             }
         } else {//根据ID获取
             $id = $filter;
-            
-            if (is_array($get_one)) {
-                $one_arr = array();
-                foreach ($get_one as $obj){
-                    $arr = explode('.',$obj);
-                    $one_arr[] = $arr;
-                    $result[$arr[1].'_list'] = array();
-                }
-            }
             
             if ($id == '') {
                 return array($this->key_list=>array());
@@ -444,16 +524,16 @@ final class dao {
                     $sql = 'UPDATE '.$this->tbl.' SET ';
                     $i = 0;
                     foreach($fields as $fld){
-                        $sql .= ' '.$fld.' = '.$fld.' + ('.$values[$i].'),';
+                        $sql .= ' `'.$fld.'` = `'.$fld.'` + ('.$values[$i].'),';
                         $i = $i    + 1;
                     }
                     foreach ($data as $k => $v) {
-                        $sql .= ' '.$k.' = :v_'.$k.',';
+                        $sql .= ' `'.$k.'` = :v_'.$k.',';
                     }
 //                     $sql = substr($sql,0,(mb_strlen($sql)-1)) . ' WHERE 1=1';
                     $sql = substr($sql,0,-1) . ' WHERE 1=1';
                     foreach ($filter as $k => $v) {
-                        $sql .= ' AND '.$k.' = :f_'.$k;
+                        $sql .= ' AND `'.$k.'` = :f_'.$k;
                     }
                     $param = array_merge( $this->pre_para($data,'v_'), $this->pre_para($filter,'f_') );
                     $result = $this->db->execute($sql,$param);
@@ -462,11 +542,11 @@ final class dao {
                 $sql = 'UPDATE ' . $this->tbl .' SET ';
                 $i = 0;
                 foreach($fields as $fld){
-                    $sql .= ' '.$fld.' = '.$fld.' + ('.$values[$i].'),';
+                    $sql .= ' `'.$fld.'` = '.$fld.' + ('.$values[$i].'),';
                     $i = $i    + 1;
                 }
                 foreach ($data as $k => $v) {
-                    $sql .= ' '.$k.' = :v_'.$k.',';
+                    $sql .= ' `'.$k.'` = :v_'.$k.',';
                 }
 //                 $sql = substr($sql,0,(mb_strlen($sql)-1));
                 $sql = substr($sql, 0, -1);
@@ -527,7 +607,11 @@ final class dao {
                 foreach($lst['list'] as $obj){
                     $tmp = $this->get($obj[$this->key], null, null, $get_one);
                     foreach($tmp as $k=>$v){
-                        $result[$k][] = $v[0];
+                    	if (count($v) > 0){
+                    		$result[$k][] = $v[0];
+                    	} else {
+                    		$result[$k][] = array();
+                    	}
                     }
                 }
             } else {//未使用缓存
@@ -564,11 +648,11 @@ final class dao {
      * 进行批量删除
      * @author 欧远宁
      * @param string $where  查询条件   'last>:last'
-     * @param array $para    对应的参数  array('lastLogin'=>'2008-01-01')
+     * @param array $para    对应的参数  array('time'=>'2008-01-01')
      * @return int    成功操作的笔数
      * @example
-     * $topicDao = new dao('blog','topic');<br/>
-     * $topicDao->fDel('add_time>:add_time', array('add_time'=>121212323));<br/>
+     * $topic_dao = new dao('blog','topic');<br/>
+     * $topic_dao->fDel('add_time>:add_time', array('add_time'=>121212323));<br/>
      */
     public function fdel($where='1=1', $para=array()){
         if ($where == '') {
@@ -591,12 +675,12 @@ final class dao {
      * 进行批量更新
      * @author 欧远宁
      * @param string $where 查询条件   'last>:last'
-     * @param array $para   对应的参数  array('lastLogin'=>'2008-01-01')
+     * @param array $para   对应的参数  array('last'=>'2008-01-01')
      * @param array $data   更新的数据 array('name'=>'ou');
      * @return int 成功操作的笔数
      * @example
-     * $topicDao = new dao('blog','topic');<br/>
-     * $topicDao->fmdf('add_time>:add_time', array('title'=>'已过期'));<br/>
+     * $topic_dao = new dao('blog','topic');<br/>
+     * $topic_dao->fmdf('add_time>:add_time', array('add_time'=>1111), array('title'=>'已过期'));<br/>
      */
     public function fmdf($where='1=1', $para=array(), $data=array()){
         if ($where == '') {
@@ -624,9 +708,9 @@ final class dao {
     /**
      * 保留一个直接使用sql的接口。方便进行统计。该接口不会使用任何缓存。慎用。
      * @author 欧远宁
-     * @param string $sql        查询sql   'select * from stat where last>:last'，记住这里不要放分页信息
-     * @param array $para        对应的参数  array('lastLogin'=>'2008-01-01')
-     * @param array $page   分页参数    array('cur' => 1, 'size' => 20','all'=>'n','ttl'='n')
+     * @param string $sql 查询sql   'select * from stat where last>:last'，记住这里不要放分页信息
+     * @param array $para 对应的参数  array('lastLogin'=>'2008-01-01')
+     * @param array $page 分页参数    array('cur'=>1,'size'=>20','all'=>'n','ttl'='n','start'=0)
      */
     public function sql($sql, $para, $page=null) {
         $ret = $this->db->query($sql, $this->pre_para($para), $page);
@@ -806,7 +890,7 @@ final class dao {
             return $arr;
         }
         
-        if (count($arr) == 0) {
+        if (!is_array($arr) || count($arr) == 0) {
             return $arr;
         }
 

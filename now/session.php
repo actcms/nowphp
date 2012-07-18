@@ -36,7 +36,7 @@ final class session {
     private static $sessions = array();
     
     /**
-     * 根据玩家id。获取一个session的哈希
+     * 根据参数，生成一个加密的session字符串
      * 以后每次请求都需要传递此字符串，以便确认用户身份
      * @static
      * @author 欧远宁
@@ -60,8 +60,7 @@ final class session {
     }
     
     /**
-     * 获取当前登录玩家
-     * 根据玩家传过来的字符串确定玩家身份
+     * 获取并验证当前登录用户的session信息
      * @static
      * @author 欧远宁
      * @param string $session session字符串
@@ -91,17 +90,34 @@ final class session {
     }
     
     /**
-     * 得到session的值
+     * 得到session中某个key的值
      * @static
      * @author 欧远宁
      * @param string $key
      */
     public static function get($key){
         if(key_exists($key, self::$sessions)){
-            self::$sessions[$key];
+            return self::$sessions[$key];
         } else {
             return null;
         }
+    }
+    
+    /**
+     * 得到当前session的所有值
+     */
+    public static function all(){
+    	return self::$sessions;
+    }
+    
+    /**
+     * 给当前session增加一个key
+     * @param string $key
+     * @param any $val
+     */
+    public static function add($key, $val){
+    	self::$sessions[$key] = $val;
+    	self::make_session(self::$sessions);
     }
     
 }
