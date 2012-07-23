@@ -56,7 +56,22 @@ final class session {
             $cfg = $GLOBALS['cfg']['cfg']['session']['cookie'];
             setcookie(self::$cookie_name, $str,  $cfg['expire'], $cfg['path'], $cfg['domain'], $cfg['secure'], $cfg['httponly']);
         }
+        self::$sessions = $para;
         return $str;
+    }
+    
+    /**
+     * 得到当前session的字符串，只在使用cookie保存session时候有效
+     * @static
+     * @return string
+     */
+    public static function get_session_str(){
+    	if (self::$to_cookie){
+    		if(isset($_COOKIE[self::$cookie_name])){
+    			return $_COOKIE[self::$cookie_name];
+    		}
+    	}
+    	return '';
     }
     
     /**
@@ -66,7 +81,7 @@ final class session {
      * @param string $session session字符串
      */
     public static function get_session($session='') {
-        if (self::$to_cookie){
+        if ($session == '' && self::$to_cookie){
             if(isset($_COOKIE[self::$cookie_name])){
                 $session = $_COOKIE[self::$cookie_name];
                 unset($_COOKIE[self::$cookie_name]);

@@ -120,7 +120,11 @@ abstract class cmd {
             }
         } else {
             if (!fun::val_str($str, $val)){
-               throw new err('The value of ['.$str.'] can not be verified');
+				if ($throw){
+              	 	throw new err('The value of ['.$str.'] can not be verified');
+				} else {
+					return FALSE;
+				}
             }
         }
         return TRUE;

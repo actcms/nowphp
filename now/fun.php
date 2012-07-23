@@ -106,10 +106,11 @@ final class fun {
      * ip		检查IP<br/>
      * mail		检查email<br/>
      * url      检查URL<br/>
-     * zip      检查邮编
-     * passwod  检查密码
+     * idcard   检查身份证<br/>
+     * zip      检查邮编<br/>
+     * passwod  检查密码<br/>
      * phone    电话号码<br/>
-     * mobile   手机号
+     * mobile   手机号<br/>
      * date     日期，格式为yyyy-mm-dd<br/>
      * datetime 时间，格式为yyyy-mm-dd hh:ii:ss<br/>
      * timestamp 时间戳类型<br/>
@@ -153,16 +154,22 @@ final class fun {
                 }
                 break;
             case 'int'://int-min-max
+                if (!ctype_digit($str.'')){
+                    return false;
+                }
                 $min = (isset($arr[1])) ? $arr[1]-1 : -1;
-                $max = (isset($arr[2])) ? $arr[2]+1 : 210000000;
-                return ($str > $min && $str < $max);
+                if (isset($arr[2])){
+                	return ($str > $min && $str <= $arr[2]);
+                } else {
+                	return ($str > $min);
+                }
                 break;
-            case 'float': //float-精度-整数部分最小-整数部分最大
+            case 'float': //float-精度-最小-最大
             	if(!preg_match('/^[0-9]+\.?[0-9]{0,'.$arr[1].'}/', $str)){
             		return false;
             	}
-            	$int = (int) $str;
-            	return ($int > ($arr[2]-1) && $int < ($arr[3]+1) );
+            	$str = $str + 0;
+            	return ( ($str >= (int)$arr[2]) && ($str <= (int)$arr[3]) );
             	break;
             case 'alpha'://验证字母 alpha-min-max
                 if (!ctype_alpha($str)){
@@ -176,7 +183,7 @@ final class fun {
                 }
                 break;
             case 'num'://验证数字
-                if (!ctype_digit($str)){
+                if (!ctype_digit($str.'')){
                     return false;
                 }
                 $len = mb_strlen($str);
@@ -197,7 +204,7 @@ final class fun {
                 }
                 break;
             case 'timestamp': //验证timestamp类型
-            	if (!ctype_digit($str)){
+            	if (!ctype_digit($str.'')){
             		return false;
             	}else{
 					return true;
