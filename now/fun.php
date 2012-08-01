@@ -320,7 +320,11 @@ final class fun {
             $to_arr = $target[$i];
             $fr_arr = $arr[$i];
             foreach($keys as $k){
-                $to_arr[$pre.$k] = $fr_arr[$k];
+//             	if (key_exists($k, $fr_arr)){
+            		$to_arr[$pre.$k] = $fr_arr[$k];
+//             	} else {
+//             		$to_arr[$pre.$k] = '';
+//             	}
             }
             $ret[] = $to_arr;
         }

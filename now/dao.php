@@ -138,7 +138,7 @@ final class dao {
             $data = array($data);
         }
         
-        $bsql = 'INSERT INTO ' .$this->tbl . ' (';
+        $bsql = 'INSERT INTO `' .$this->tbl . '` (';
         try{
         	$result = 0;
             foreach($data as $para){
@@ -206,7 +206,7 @@ final class dao {
                 //先删除hasMany
                 $this->del_many(array($this->key=>$filter), $del_many);
                                 
-                $sql = 'DELETE FROM '.$this->tbl.' WHERE '.$this->key.'=:'.$this->key;
+                $sql = 'DELETE FROM `'.$this->tbl.'` WHERE '.$this->key.'=:'.$this->key;
                 $para = array(':'.$this->key=>$filter);
                 $re = $this->db->execute($sql, $para);
 
@@ -284,7 +284,7 @@ final class dao {
                         $result += $this->mdf($obj[$this->key], $data);
                     }
                 } else {
-                    $sql = 'UPDATE '. $this->tbl. ' SET ';
+                    $sql = 'UPDATE `'. $this->tbl. '` SET ';
                     foreach ($data as $k => $v) {
                         $sql .= ' `'.$k.'` = :v_'.$k.',';
                     }
@@ -296,7 +296,7 @@ final class dao {
                     $result = $this->db->execute($sql, $param);
                 }
             } else {//根据ID更新
-                $sql = 'UPDATE '.$this->tbl.' SET ';
+                $sql = 'UPDATE `'.$this->tbl.'` SET ';
                 foreach ($data as $k => $v) {
                     $sql .= ' `'.$k.'` = :'.$k.',';
                 }
@@ -326,7 +326,7 @@ final class dao {
      * $child_num = $user_dao->count('age < :age', array('age'=>12));<br/>
      */
     public function count($filter, $para=array()){
-        $sql = 'SELECT COUNT('.$this->key.') as ttl FROM '.$this->tbl.' WHERE';
+        $sql = 'SELECT COUNT('.$this->key.') as ttl FROM `'.$this->tbl.'` WHERE';
         if( is_array($filter) ) {
             $sql.=' 1=1';
             foreach ($filter as $k => $v) {
@@ -343,7 +343,7 @@ final class dao {
     }
     
     /**
-     * 进行字段的加总
+     * 进行多字段的统计
      * @author 欧远宁
      * @param array $fields 	统计的字段
      * @param string $where     where字句。可以包含group by 和order by等。
@@ -351,29 +351,35 @@ final class dao {
      * @param array $group_by   group by字句
      * @example
      * $pro_dao = new dao('base', 'pro');<br/>
-     * $rec = $pro_dao->fsum('pre_degree');<br/>
-     * $rec = $pro_dao->fsum(array('pre_degree'));<br/>
-     * $rec = $pro_dao->fsum(array('pre_degree'), 'pro_id=:pro_id', array('pro_id'=>'aaa'));<br/>
-     * $rec = $pro_dao->fsum(array('pre_degree'), '', null, 'pro_kind_id');
+     * $rec = $pro_dao->fstat(array('pre_degree'=>'SUM','field2'=>''));<br/>
+     * $rec = $pro_dao->fstat(array('pre_degree'=>'SUM'), 'pro_id=:pro_id', array('pro_id'=>'aaa'));<br/>
+     * 
+     * $rec = $pro_dao->fstat(array('pre_degree'=>'SUM','score'=>'AVG', 'kind'=>''),null,null,'kind');
+     * 类似于select SUM(pre_degree) as SUM_pre_degree, AVG(score) as AVG_score, kind FROM pro GROUP BY kind;
      */
-    public function fsum($fields, $where='', $para=null , $group_by=''){
-    	if (!is_array($fields)){
-    		$fields = array($fields);
+    public function fstat($fields, $where, $para=null, $group_by=''){
+    	if (!is_array($fields) || empty($fields)){
+    		throw new err('错误的字段统计参数');
     	}
     	$sql = 'SELECT';
-    	foreach($fields as $field){
-    		$sql.= ' SUM(`'.$field.'`) AS '.$field;
+    	foreach($fields as $k=>$v){
+    		if ($v === ''){
+    			$sql.= ' `'.$k.'`,';
+    		} else {
+    			$sql.= ' '.$v.'(`'.$k.'`) AS '.$v.'_'.$k.',';
+    		}
     	}
-    	$sql.= ' FROM '.$this->tbl;
+    	$sql = substr($sql, 0, -1);
+    	$sql.= ' FROM `'.$this->tbl.'`';
     	if ($where != ''){
     		$sql.= ' WHERE '.$where;
-            $para = $this->pre_para($para);
+    		$para = $this->pre_para($para);
     	}
     	if ($group_by != ''){
     		$sql.= ' GROUP BY '.$group_by;
     	}
-        $lst = $this->db->query($sql, $para);
-        return $lst;
+    	$lst = $this->db->query($sql, $para, array('all'=>'y'));
+    	return $lst;
     }
     
     /**
@@ -456,7 +462,7 @@ final class dao {
                 $re = $this->cache->get($cid);
 
                 if ($re==''){    //未命中缓存
-                    $sql = 'SELECT '.$this->schema['fields'].' FROM '.$this->tbl.$where;
+                    $sql = 'SELECT '.$this->schema['fields'].' FROM `'.$this->tbl.'`'.$where;
                     $tmp = $this->db->query($sql, $filter_para);
                     if (count($tmp) > 0){
                         $result[$this->key_list] = $tmp;
@@ -466,7 +472,7 @@ final class dao {
                     $result[$this->key_list] = $re;
                 }
             } else {//未使用缓存
-                $sql = 'SELECT '.$this->schema['fields'].' FROM '.$this->tbl. $where;
+                $sql = 'SELECT '.$this->schema['fields'].' FROM `'.$this->tbl.'`'. $where;
                 $result[$this->key_list] = $this->db->query($sql, $filter_para);
             }
                 
@@ -523,7 +529,7 @@ final class dao {
                         $result += $this->inc($obj[$this->key], $fields, $values, $data);
                     }
                 } else {
-                    $sql = 'UPDATE '.$this->tbl.' SET ';
+                    $sql = 'UPDATE `'.$this->tbl.'` SET ';
                     $i = 0;
                     foreach($fields as $fld){
                         $sql .= ' `'.$fld.'` = `'.$fld.'` + ('.$values[$i].'),';
@@ -541,7 +547,7 @@ final class dao {
                     $result = $this->db->execute($sql,$param);
                 }
             } else {//根据ID更新
-                $sql = 'UPDATE ' . $this->tbl .' SET ';
+                $sql = 'UPDATE `' . $this->tbl .'` SET ';
                 $i = 0;
                 foreach($fields as $fld){
                     $sql .= ' `'.$fld.'` = '.$fld.' + ('.$values[$i].'),';
@@ -618,14 +624,14 @@ final class dao {
                 }
             } else {//未使用缓存
                 if (is_array($page) && key_exists('ttl', $page) && $page['ttl'] == 'y'){    //根据需要返回分页信息
-                    $psql = 'SELECT count('.$this->key.') AS ttl FROM '.$this->tbl. ' WHERE '.$where;
+                    $psql = 'SELECT count('.$this->key.') AS ttl FROM `'.$this->tbl. '` WHERE '.$where;
                     $plist = $this->db->query($psql, $para);
                     $result['ttl'] = $plist[0]['ttl'];
                 } else {
                     $result['ttl'] = null;
                 }
                 
-                $sql = 'SELECT ' .$this->key. ' FROM ' .$this->tbl. ' WHERE '.$where;
+                $sql = 'SELECT ' .$this->key. ' FROM `' .$this->tbl. '` WHERE '.$where;
                 $para = $this->pre_para($para);
                 if (!is_null($order) && $order !== '') {
                     $sql .= ' ORDER BY '.$order;
@@ -667,7 +673,7 @@ final class dao {
                 $result += $this->del($obj[$this->key]);
             }
         } else {//未使用缓存，直接删除
-            $sql = 'DELETE FROM '.$this->tbl.' WHERE '.$where;
+            $sql = 'DELETE FROM `'.$this->tbl.'` WHERE '.$where;
             $result = $this->db->execute($sql, $this->pre_para($para));
         }
         return $result;
@@ -695,7 +701,7 @@ final class dao {
                 $result += $this->mdf($obj[$this->key], $data,array('all'=>'y'));
             }
         } else {//未使用缓存
-            $sql = 'UPDATE '. $this->tbl . ' SET ';
+            $sql = 'UPDATE `'. $this->tbl . '` SET ';
             foreach ($data as $k => $v) {
                 $sql .= ' '.$k.' = :v_'.$k.',';
             }
@@ -730,7 +736,7 @@ final class dao {
      */
     private function find_rec($where, $para, $page=null, $order=null){
         try{
-            $sql = 'SELECT '.$this->key.' FROM '.$this->tbl.' WHERE '.$where;
+            $sql = 'SELECT '.$this->key.' FROM `'.$this->tbl.'` WHERE '.$where;
             $psql = '';
 
             if (isset($page['ttl']) && $page['ttl'] == 'y'){    //根据需要返回分页信息
@@ -836,7 +842,7 @@ final class dao {
      * @return array
      */
     private function query($filter, $page=null, $order=null){
-        $sql = 'SELECT '.$this->key.' FROM '.$this->tbl.' WHERE 1=1';
+        $sql = 'SELECT '.$this->key.' FROM `'.$this->tbl.'` WHERE 1=1';
         
         foreach ($filter as $k => $v) {
             $sql.= ' AND '.$k.' = :'.$k;

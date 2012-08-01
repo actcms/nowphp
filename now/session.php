@@ -54,6 +54,11 @@ final class session {
         
         if (self::$to_cookie){
             $cfg = $GLOBALS['cfg']['cfg']['session']['cookie'];
+            if (VER != 'pro' && stripos($_SERVER['HTTP_USER_AGENT'], 'MSIE')){
+            	if (ip2long($cfg['domain']) || stripos($cfg['domain'], '.') === FALSE){
+            		$cfg['domain'] = '';
+            	}
+            }
             setcookie(self::$cookie_name, $str,  $cfg['expire'], $cfg['path'], $cfg['domain'], $cfg['secure'], $cfg['httponly']);
         }
         self::$sessions = $para;
