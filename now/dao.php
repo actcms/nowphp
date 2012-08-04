@@ -413,7 +413,11 @@ final class dao {
         	foreach ($get_one as $obj){
         		$arr = explode('.',$obj);
         		$one_arr[] = $arr;
-        		$result[$arr[1].'_list'] = array();
+        		if (count($arr) == 4){
+        			$result[$arr[3].'_list'] = array();
+        		} else {
+        			$result[$arr[1].'_list'] = array();
+        		}
         	}
         }
         
@@ -482,10 +486,15 @@ final class dao {
             if ($cLen > 0 && is_array($get_one)){
                 foreach($one_arr as $one){
                     $c = new dao($one[0], $one[1]);
-                    if (count($one) == 2){
+                    $len = count($one);
+                    if ($len < 3){
                         $tmp = $c->get($id);
                     } else {
                         $tmp = $c->get($result[$this->key_list][0][$one[2]]);
+                    }
+                    if ($len == 4){
+                    	$tmp[$one[3].'_list'] = $tmp[$one[1].'_list'];
+                    	unset($tmp[$one[1].'_list']);
                     }
                     $result = array_merge($result, $tmp);
                 }
