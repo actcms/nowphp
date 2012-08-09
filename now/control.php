@@ -56,7 +56,7 @@ final class control {
         
         if (!key_exists('_c', $_REQUEST)){//说明要么是首页，要么是json类型的请求
             if ($_SERVER['REQUEST_METHOD'] == 'GET'){//如果是get请求，并且没有_cmd参数，那么
-                $data['para'] = array();//不接受get的参数
+                $data['para'] = $_REQUEST;
                 if (!isset($data['cmd'])){
                     $data['cmd'] = explode('.', $GLOBALS['cfg']['cfg']['index']);
                 }
@@ -97,7 +97,7 @@ final class control {
             }
 
             $mdl = $data['cmd'][0];
-            $cls = $data['cmd'][1];
+            $cls_name = $data['cmd'][1];
             $method = $data['cmd'][2];
 
             //得到session
@@ -111,10 +111,12 @@ final class control {
             } else if (session::$to_cookie){//保存到cookie中
                 session::get_session();
             }
-
-            $clsName = 'cmd\\'.$mdl.'\\'.$cls;
-            $cls = new $clsName($mdl);
-
+			
+            $cls_path = 'cmd\\'.$mdl.'\\'.$cls_name;
+            $method_path = $mdl.'.'.$cls_name.'.'.$method;
+            $cls = new $cls_path($method_path);
+            
+            inject::cmd_before($method_path, $data['para']);
             call_user_func(array($cls, $method), $data['para']);
 
             self::commit();
@@ -125,11 +127,12 @@ final class control {
             } else {
                 $ret = array(
                         '_c'=>$e->getCode(),
-                        '_m'=>$e->getMessage()
+                        '_m'=>$e->getMessage(),
+                		'rows'=>array(),
+                		'total'=>0
                         );
                 view::json($ret);
             }
-//             print_r($e->getTrace());
         } catch (Exception $ex){//捕获未预估的异常
             self::rollback();
             if (isset($data['para']['r'])){
@@ -137,7 +140,9 @@ final class control {
             } else {
                 $ret = array(
                         '_c'=>$ex->getCode(),
-                        '_m'=>$ex->getMessage()
+                        '_m'=>$ex->getMessage(),
+                		'rows'=>array(),
+                		'total'=>0
                         );
                 view::json($ret);
             }

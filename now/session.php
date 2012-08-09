@@ -36,15 +36,33 @@ final class session {
     private static $sessions = array();
     
     /**
+     * 随机数
+     * @var string
+     */
+    public static $rand = '';
+    
+    /**
+     * 初始化session
+     * @static
+     * @author 欧远宁
+     * @param string $uid 用户id
+     */
+    public static function init_session($para=array()){
+    	self::$rand = microtime(TRUE).'';
+    	return self::make_session($para);
+    }
+    
+    
+    /**
      * 根据参数，生成一个加密的session字符串
      * 以后每次请求都需要传递此字符串，以便确认用户身份
      * @static
      * @author 欧远宁
      * @param string $uid 用户id
      */
-    public static function make_session($para=array()) {
+    private static function make_session($para=array()) {
         $secret = self::$secret;
-        $rand = microtime(TRUE).'';
+        $rand = self::$rand;
         
         $data = serialize($para);
         $ck = md5($rand.$data.$secret);
@@ -106,6 +124,7 @@ final class session {
         $str = md5($arr[0].$arr[2].$secret);
         if ($str == $arr[1]) {
             self::$sessions = unserialize($arr[2]);
+            self::$rand = $arr[0];
         }
     }
     
@@ -136,6 +155,9 @@ final class session {
      * @param any $val
      */
     public static function add($key, $val){
+    	if (self::$rand == ''){
+    		throw new err('session 尚未初始化');
+    	}
     	self::$sessions[$key] = $val;
     	self::make_session(self::$sessions);
     }

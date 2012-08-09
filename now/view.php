@@ -122,4 +122,15 @@ final class view {
     		readfile($path);
     	}
     }
+    
+    /**
+     * 进行重定向
+     * @static
+     * @author 欧远宁
+     * @param string $url
+     */
+    public static function redirect($url){
+    	$html = '<html><head><title></title><meta http-equiv="refresh" content="0;url='.$url.'"/><body></body></html>';
+    	echo $html;
+    }
 }

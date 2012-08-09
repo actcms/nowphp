@@ -161,7 +161,7 @@ final class cache {
      * @param string $id    缓存的key
      * @return 缓存数据内容
      */
-    public function get($id){
+    public function get($id, $default=''){
         if (key_exists($id, $this->buf_list)){
             return $this->buf_list[$id][0];
         }
@@ -174,7 +174,7 @@ final class cache {
             $this->buf_list[$id] = array($ret, -99);
             return $ret;
         } catch (Exception $e){
-            return '';
+            return $default;
         }
     }
     
@@ -204,8 +204,7 @@ final class cache {
     }
     
     /**
-     * 进行自增操作，由于是自增操作，所以此时并不能确定当前get的值，所以无法放到updateList当中。
-     * 所以进行自增操作的逻辑会是先操作Cache。如果事务回滚，则进行一次反向操作
+     * 进行自增操作，
      * @author 欧远宁
      * @param string $id   cache的key
      * @param int $num     自增数值，可以为负数
@@ -213,13 +212,21 @@ final class cache {
      */
     public function inc($id, $num=1, $default=0){
         if (key_exists($id, $this->buf_list)){
+        	if ($this->buf_list[$id][0] == ''){
+        		$this->buf_list[$id][0] = 0;
+        	}
             $this->buf_list[$id][0] = $this->buf_list[$id][0] + $num;
+            $this->buf_list[$id][1] = 0;
         } else {
             if (key_exists($id, $this->del_list)){
                 unset($this->del_list[$id]);
             }
             $this->open();
-            $old = $this->mem_cls->get($id);
+            try {
+            	$old = $this->mem_cls->get($id);
+            } catch (Exception $e){
+            	$old = '';
+        	}
             if($old === ''){
                 $this->buf_list[$id] = array($default + $num, 0);
             } else {

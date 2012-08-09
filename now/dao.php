@@ -79,7 +79,7 @@ final class dao {
         $this->schema = $GLOBALS['cfg'][$mdl]['schema'][$tbl];
         $this->sql = $GLOBALS['cfg'][$mdl]['sql'];
         
-        $suf = dbsplit::split($mdl, $tbl);
+        $suf = inject::split($mdl, $tbl);
         
         //我们用版本号作为缓存key的前缀，以便当数据结构变更的时候，将对象缓存自动过期
         $this->ver = $this->schema['ver'].'.';
@@ -587,7 +587,7 @@ final class dao {
      * 如果都是是用等于进行筛选，请使用本类的Get函数，因为这样才能更有效的使用查询缓存
      * @author 欧远宁
      * @param string $where 查询条件   'last>:last'
-     * @param array $para   对应的参数  array('lastLogin'=>'2008-01-01')
+     * @param array $para   对应的参数  array('last'=>'2008-01-01')
      * @param array $page   分页参数    array('cur'=>当前页数,'size'=>每页数据量, start=开始笔数,不予cur同时使用,<br/>
      *                                     'all'=>是否全部取回来y/n,'ttl'=是否返回总数)
      * @param string $order 排序信息    'last Desc,uid Asc'
@@ -759,8 +759,9 @@ final class dao {
             $lst['list'] = array();
             
             //每个表对应查询缓存的流水好，当该表的数据变更后，该流水号会递增，以便使其查询缓存失效
-            $flowNo = $this->cache->get('qc.'.$this->mdl.'.'.$this->tbl);
-            $cid = 'fqc.'.md5($this->mdl.$this->tbl.serialize(array($where, $para, $page, $order)).$flowNo);
+            $flow = $this->cache->get('qc.'.$this->mdl.'.'.$this->tbl, '0');
+            $flow = ($flow == '') ? '0' : $flow;
+            $cid = 'fqc.'.md5($this->mdl.$this->tbl.serialize(array($where, $para, $page, $order)).$flow);
             
             $tmp = $this->cache->get($cid);
             
@@ -828,7 +829,8 @@ final class dao {
         $rec = array();
         if ($this->schema['cache'] > -1){
             //每个表对应查询缓存的流水好，当该表的数据变更后，该流水号会递增，以便使其查询缓存失效
-            $flow = $this->cache->get('qc.'.$this->mdl.'.'.$this->tbl);
+            $flow = $this->cache->get('qc.'.$this->mdl.'.'.$this->tbl, '0');
+            $flow = ($flow == '') ? '0' : $flow;
             $tid = 'gqc.'.md5($this->mdl.$this->tbl.serialize(array($filter, $page, $order)).$flow);
             $rec = $this->cache->get($tid);
             

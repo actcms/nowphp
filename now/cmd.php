@@ -15,17 +15,17 @@ use now\view as view;
 abstract class cmd {
     
     /**
-     * 模块名
+     * 此次请求的方法
      * @var string
      */
-    protected $mdl = '';
+    protected $method = '';
     
     /**
      * 构造函数
      * @author 欧远宁
      */
-    public function __construct($mdl){
-        $this->mdl = $mdl;
+    public function __construct($method){
+        $this->method = $method;
     }
     
     /**
@@ -61,7 +61,9 @@ abstract class cmd {
 	 *		),'down');
      */
     protected final function _ret($data=array(), $type='json', $para=null){
+        inject::cmd_after($this->method, $data, $type, $para);
         if ($type == 'json'){
+        	$data['_sid'] = session::$rand;
             view::json($data);
         } else if ($type == 'jsonp'){
             view::jsonp($para, $data);
@@ -77,6 +79,8 @@ abstract class cmd {
         	} else {
         		view::down($data['name'], $data['path']);
         	}
+       } else if ($type == 'redirect'){
+       		view::redirect($data);
        }
     }
     
