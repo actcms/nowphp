@@ -327,6 +327,7 @@ final class fun {
 						$to_arr[$pre.$k] = '';
 					}
 				} else {
+						
 					$to_arr[$pre.$k] = $fr_arr[$k];
 				}
 			}

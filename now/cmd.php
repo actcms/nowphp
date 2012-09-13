@@ -63,7 +63,6 @@ abstract class cmd {
     protected final function _ret($data=array(), $type='json', $para=null){
         inject::cmd_after($this->method, $data, $type, $para);
         if ($type == 'json'){
-        	$data['_sid'] = session::$rand;
             view::json($data);
         } else if ($type == 'jsonp'){
             view::jsonp($para, $data);
@@ -157,6 +156,22 @@ abstract class cmd {
             }
         }
         return TRUE;
+    }
+    
+    /**
+     * 剔除空字段内容,返回都是有数据的字段
+     * @author 欧远宁
+     * @param array $para	输入参数
+     * @return 去掉空输入之后的数据
+     */
+    protected final function _remove_empty($para){
+    	$ret = array();
+    	foreach($para as $k=>$v){
+    		if (!empty($v)){
+    			$ret[$k] = $v;
+    		}
+    	}
+    	return $ret;
     }
     
     /**

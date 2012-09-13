@@ -43,6 +43,17 @@ final class control {
     }
 
     /**
+     * 处理魔术引用的问题
+     * @author 欧远宁
+     * @param any $value
+     * @return new value
+     */
+    private static function _stripslashes_deep($value){
+    	$value = is_array($value) ? array_map('self::_stripslashes_deep', $value) : stripslashes($value);
+    	return $value;
+    }
+    
+    /**
      * 得到传递过来的参数信息
      * 我们支持2种方式，，
      * 一种兼容现有OA在线系统，从URL得到需要执行的cmd，从post中得到参数
@@ -53,7 +64,9 @@ final class control {
      */
     private static function get_data(){
         $data = array();
-        
+        if (get_magic_quotes_gpc()) {
+        	$_REQUEST = array_map('self::_stripslashes_deep', $_REQUEST);
+        }
         if (!key_exists('_c', $_REQUEST)){//说明要么是首页，要么是json类型的请求
             if ($_SERVER['REQUEST_METHOD'] == 'GET'){//如果是get请求，并且没有_cmd参数，那么
                 $data['para'] = $_REQUEST;
@@ -109,7 +122,7 @@ final class control {
                 session::get_session($data['para']['_s']);
                 unset($data['para']['_s']);
             } else if (session::$to_cookie){//保存到cookie中
-                session::get_session();
+                session::get_session($data['para']);
             }
 			
             $cls_path = 'cmd\\'.$mdl.'\\'.$cls_name;
@@ -117,6 +130,7 @@ final class control {
             $cls = new $cls_path($method_path);
             
             inject::cmd_before($method_path, $data['para']);
+            unset($data['para']['_nowsid']);
             call_user_func(array($cls, $method), $data['para']);
 
             self::commit();

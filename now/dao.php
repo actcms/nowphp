@@ -431,7 +431,9 @@ final class dao {
         	if ($flen > 0 && !fun::is_assoc($filter)){
         		foreach($filter as $fkey){
         			$tmp = $this->get($fkey, null, null, $get_one);
-        			$result = array_merge($result, $tmp);
+        			foreach($result as $k=>$v){
+        				$result[$k] = array_merge($v, $tmp[$k]);
+        			}
         		}
         		return $result;
         	}
